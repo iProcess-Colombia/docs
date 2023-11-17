@@ -1,0 +1,51 @@
+---
+title: "Auto"
+description: "Auto versionado de respositorios"
+---
+
+## Biblioteca Auto para el Versionado
+
+### Descripción
+
+La biblioteca `auto` es una herramienta clave en nuestros proyectos para gestionar el versionado de manera eficiente. Esta herramienta automatiza la generación y actualización de números de versión, simplificando el proceso de seguimiento de cambios en el código y la liberación de nuevas versiones.
+
+### Características Principales
+
+- **Semántica de Versionado:**
+
+  - Utiliza el concepto de [semántica de versionado](https://semver.org/) para asignar versiones significativas a cada cambio. Esto facilita la comprensión de la compatibilidad de las versiones y las actualizaciones.
+
+- **Generación de Notas de Versión:**
+
+  - `auto` puede generar automáticamente notas de versión basadas en los mensajes de confirmación, simplificando la creación de registros de cambios claros y concisos.
+
+- **Creación de releases en github:**
+
+  - `auto` puede generar automáticamente releases y prerealeses.
+
+- **Envío de Notificaciones por Slack:**
+  - `auto` puede enviar automáticamente mensajes a Slack cuando se realizan modificaciones en la rama principal del repositorio. Estos mensajes contienen información valiosa, como los commits realizados, organizados por tipo.
+
+### Uso Básico
+
+Para utilizar `auto`, simplemente sigue estos pasos básicos:
+
+1. **Uso en Commits:**
+
+   - Realiza tus **commits** con mensajes descriptivos y sigue las [convenciones](https://www.conventionalcommits.org/en/v1.0.0-beta.4/) de mensajes para que `auto` pueda generar versiones significativas automáticamente.
+
+2. **Generación de Versiones:**
+
+   - **Push rama main:**
+
+     Cuando realizas un push en la rama main, se activa automáticamente un trabajo (job) en GitHub Actions. Este trabajo utiliza auto para crear un nuevo release basado en los commits realizados y en la configuracion descrita en el archivo `.autorc`.
+
+   - **Push en ramas prerealese:**
+
+     Cuando realizas un push en una rama configurada como prerelease, se creara una nueva version en github etiquetada como **prerealese**, la creacion de este tipo de versiones no es notificado en `slack`, las ramas prerealeses las puedes consultar en el archivo de configuracion `.autorc` en la raiz del proyecto.
+
+   - **Pull Request:**
+
+     `auto` genera un nuevo realese automaticamente cuando completas un PR en direccion a la rama main gracias al job en GitHub Actions.
+
+Con la ayuda de `auto`, esperamos facilitar el manejo de versiones en nuestros proyectos y mejorar la claridad en el desarrollo y lanzamiento de software.
