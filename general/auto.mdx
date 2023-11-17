@@ -48,4 +48,147 @@ Para utilizar `auto`, simplemente sigue estos pasos básicos:
 
      `auto` genera un nuevo realese automaticamente cuando completas un PR en direccion a la rama main gracias al job en GitHub Actions.
 
+## Archivos necesarios
+
+se necesitan fundamentalmente dos archivos para que `auto` se integre de la mejor manera al flujo de trabajo. esos archivos son los siguiente:
+
+### 1. Job GitHub actions
+
+#### Ubicacion
+
+Este archivo debe estar ubicado en `raiz/.github/workflows/release.yml`, el archivo permite definir un job que GitHub ejecutara segun las instrucciones dadas.
+
+#### Estructura
+
+el action se ve de la siguiente manera:
+
+```yml release.yml
+name: Release
+
+on: [push]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Skip CI
+        uses: veggiemonk/skip-commit@master
+        env:
+          COMMIT_FILTER: skip ci
+
+      - name: Set up Git identity
+        run: |
+          git config --global user.email "${{ github.event.head_commit.author.email }}"
+          git config --global user.name "${{ github.event.head_commit.author.name }}"
+
+      - name: Prepare repository
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          git fetch --unshallow --tags
+          git checkout "${GITHUB_REF/refs\/heads\//}" --
+          git remote rm origin
+          git remote add origin "https://$GH_TOKEN@github.com/iProcess-Colombia/test-repo.git"
+          git fetch origin
+          git branch --set-upstream-to=origin/main
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 20.x
+
+      - name: instalando dependencias
+        run: |
+          npm install -g pnpm
+          pnpm install
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: pnpm auto shipit
+```
+
+#### Partes importantes:
+
+- **Skip CI:**
+  Hace que los commits los cuales esten marcados como `skip ci` no generen una nueva version de la aplicacion
+
+- **Set up Git identity:**
+  Guarda la informacion de la persona que hizo el push, esto permite que auto reconozca el autor del push y evite errores.
+
+- **Set up Git identity:**
+  recibe como secret `GH_TOKEN` y prepara el repositorio para que auto pueda reconocer la version actual, ademas cambia el origin por el del repositorio del proyecto, lo cual permite que `auto` pueda hacer **push** de los respectivos cambios
+
+- **Create Release:**
+  recibe como secrets `GITHUB_TOKEN`, `GH_TOKEN` y `SLACK_WEBHOOK_URL`. Ejecuta el comando de auto el cual crea el release y envia la notificacion a slack segun las configuraciones dadas en el archivo `.autorc`
+
+### 2. Configuraciones de `auto`
+
+#### Ubicacion
+
+Este archivo debe estar ubicado en `raiz/.autorc`, el archivo permite definir algunas opciones para que auto se comporte de diferebte manera, tambien se pueden incluir plugins. Puedes ver todo a detalle en [.autorc](https://intuit.github.io/auto/docs/configuration/autorc)
+
+#### Estructura
+
+```json .autorc
+{
+  "plugins": [
+    "git-tag",
+    "conventional-commits",
+    "all-contributors",
+    [
+      "slack",
+      {
+        "title": "☣️ Repo: biolodos ☣️",
+        "username": "biolodos"
+      }
+    ]
+  ],
+  "owner": "iProcess-Co",
+  "repo": "biolodos",
+  "baseBranch": "main",
+  "prereleaseBranches": ["stage", "develop"]
+}
+```
+
+#### Partes importantes
+
+Estas son las partes fundamentales para el correcto funcionamiento de auto en nuestro flujo de trabajo
+
+- **plugins:**
+  Una lista de los plugins los cuales `auto` usara para ampliar su funcionamiento, puedes ver a detalle cada plugin en:
+
+  1. [git-tag](https://intuit.github.io/auto/docs/generated/git-tag): Administra la versión de sus proyectos a través de solo una etiqueta git.
+
+  2. [conventional-commits](https://intuit.github.io/auto/docs/generated/conventional-commits): Analiza mensajes de los `commits` y utilícelos para calcular la versión.
+
+  3. [all-contributors](https://intuit.github.io/auto/docs/generated/all-contributors): Agregua contribuyentes automáticamente a medida que se produzcan registros de cambios..
+
+  4. [slack](https://intuit.github.io/auto/docs/generated/slack): Publica sus notas de la versión en un canal de slack.
+
+- **owner:**
+  Usuario de GitHub dueño del repositorio.
+
+- **repo:**
+  Nombre del repositorio, debe ser exacramente igual como esta en GitHub.
+
+- **baseBranch:**
+  Es la rama base, sobre la cual se crearan los `realeses` y de la cual se enviara notificaion a slack en caso de cambios, **no se pueden configurar dos o mas ramas base**.
+
+- **prereleaseBranches:**
+  Son ramas en las cuales se trabajan futuras funcionalidades, estas ramas deben ser lo suficientemente importantes para no ser eliminadas. Las ramas especificadas haran que se cree un `prerealese` al recibir cambios pero no se notificara en slack.
+
+### Que modificar si cambio de repo?
+
+1. Modificar el archivo `realise.yml` para que en el paso **Prepare repository** el comando `git remote add origin` apunte hacia el nuevo repositorio y modificar el comando `git branch --set-upstream-to=origin/RamaBase` para que apunte a la rama base.
+
+2. Modificar el archivo `.autorc` para que el plugin de **slack** mande el mensaje con el **titulo** y el **username** correspondiente.
+
+3. Modificar el archivo `.autorc` para que el **owner** y **repo** conincida al usuario dueño del repositorio y al nombre del nuevo repositorio.
+
+4. Modificar el archivo `.autorc` para que **baseBranch** y **prereleaseBranches** conincida con la rama base y las ramas de futuras actualizaciones segun corresponda
+
 Con la ayuda de `auto`, esperamos facilitar el manejo de versiones en nuestros proyectos y mejorar la claridad en el desarrollo y lanzamiento de software.
